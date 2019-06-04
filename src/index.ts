@@ -51,6 +51,10 @@ export interface RetryConfig {
    */
   shouldRetry?: (err: AxiosError) => boolean;
 
+  onSuccessRetry?: () => void;
+
+  onFailRetry?: () => void;
+
   /**
    * When there is no response, the number of retries to attempt. Defaults to 2.
    */
@@ -83,6 +87,14 @@ export function detach(interceptorId: number, instance?: AxiosInstance) {
 }
 
 function onFulfilled(res: AxiosResponse) {
+  const config = (res.config as RaxConfig).raxConfig || {};
+
+  const onSuccessRetryFn = config.onSuccessRetry;
+
+  if (onSuccessRetryFn) {
+    onSuccessRetryFn();
+  }
+
   return res;
 }
 
@@ -127,6 +139,10 @@ function onError(err: AxiosError) {
   // Determine if we should retry the request
   const shouldRetryFn = config.shouldRetry || shouldRetryRequest;
   if (!shouldRetryFn(err)) {
+    if (config.onFailRetry) {
+      config.onFailRetry();
+    }
+
     return Promise.reject(err);
   }
 
